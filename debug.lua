@@ -1,18 +1,20 @@
 local path = ({...})[1]:gsub("%.debug$", "")
 local debug = {}
 
+-- PROPERTIES/SETTINGS --
+
 debug.opened = false
 debug.active = false
 debug.input = ""
 debug.history = { index = 0 }
 debug.buffer = { index = 0 }
 debug.commands = {}
+debug.info = {}
 
 debug.settings = {
   pauseWorld = true,
   bufferLimit = 1000,
   historyLimit = 100,
-  prompt = "> ",
   multiEraseTime = 0.35,
   multiEraseCharTime = 0.025
 }
@@ -28,21 +30,34 @@ debug.controls = {
   execute = "return"
 }
 
+-- visual 
 debug.style = {
+  -- color
   color = { 240, 240, 240, 255 },
   bgColor = { 0, 0, 0, 200 },
   borderColor = { 200, 200, 200, 220 },
+  
+  -- spacial
   height = 400,
+  infoWidth = math.clamp(love.graphics.width / 4, 250, 400),
   borderSize = 2,
-  font = love.graphics.newFont(path:gsub("%.", "/") .. "/inconsolata.otf", 18),
   padding = 10,
+  
+  -- text
+  font = love.graphics.newFont(path:gsub("%.", "/") .. "/inconsolata.otf", 18),
+  prompt = "> ",
   cursor = "|",
+  infoSeparator = ": ",
+  
+  -- misc
   tween = true,
   openTime = 0.1,
   cursorBlinkTime = 0.5
 }
 
 debug.style.y = -debug.style.height
+
+-- LOCAL --
 
 local timers = {
   multiErase = 0,
@@ -85,7 +100,7 @@ local function moveConsole(doTween)
 end
 
 local function handleInput()
-  debug.log(debug.settings.prompt .. debug.input)
+  debug.log(debug.style.prompt .. debug.input)
   local terms = {}
   
   for t in debug.input:gmatch("[^%s]+") do
@@ -122,6 +137,8 @@ local function handleHistory()
   end
 end
 
+-- FUNCTIONS --
+
 function debug.log(...)
   local msg = ""
   local args = {...}
@@ -132,6 +149,14 @@ function debug.log(...)
   end
   
   addTo(debug.buffer, msg, debug.settings.bufferLimit)
+end
+
+function debug.addInfo(title, val)
+  debug.info[title] = val
+end
+
+function debug.removeInfo(title)
+  debug.info[title] = nil
 end
 
 function debug.open(tween)
@@ -148,6 +173,8 @@ function debug.toggle(tween)
   debug.opened = not debug.opened
   moveConsole(tween or debug.style.tween)
 end
+
+-- CALLBACKS --
 
 function debug.update(dt)
   if debug.active then
@@ -184,14 +211,18 @@ end
 
 function debug.draw()
   local s = debug.style
+  
+  -- background
   love.graphics.pushColor(s.bgColor)
   love.graphics.rectangle("fill", 0, s.y, love.graphics.width, s.height)
   love.graphics.popColor()
   
+  -- border
   love.graphics.pushColor(s.borderColor)
   love.graphics.rectangle("fill", 0, s.y + s.height, love.graphics.width, s.borderSize)
   love.graphics.popColor()
   
+  -- text
   local str = ""
   local rows = math.floor((s.height - s.padding * 2) / s.font:getHeight())
   local begin = math.max(debug.buffer.index - rows + 2, 1) -- add 2: one for the input line, another for keeping it in bounds (not sure why its needed)
@@ -200,10 +231,20 @@ function debug.draw()
     str = str .. debug.buffer[i] .. "\n"
   end
   
-  str = str .. debug.settings.prompt .. debug.input
-  if timers.blink > 0 then str = str .. debug.style.cursor end
-  love.graphics.setFont(debug.style.font)
-  love.graphics.printf(str, s.padding, debug.style.y + s.padding, love.graphics.width - s.padding * 2)
+  str = str .. s.prompt .. debug.input
+  if timers.blink > 0 then str = str .. s.cursor end
+  love.graphics.setFont(s.font)
+  love.graphics.printf(str, s.padding, s.y + s.padding, love.graphics.width - s.infoWidth - s.padding * 2)
+  
+  -- info
+  str = ""
+  
+  for k, v in pairs(debug.info) do
+    if type(v) == "function" then v = v() end
+    if v ~= nil then str = str .. k .. s.infoSeparator .. tostring(v) .. "\n" end
+  end
+  
+  love.graphics.printf(str, love.graphics.width - s.infoWidth + s.padding, s.y + s.padding, s.infoWidth - s.padding * 2)
 end
 
 function debug.keypressed(key, code)
@@ -236,6 +277,8 @@ function debug.keypressed(key, code)
     end
   end
 end
+
+-- COMMANDS --
 
 function debug.commands.lua(...)
   local func, err = loadstring(joinWithSpaces(...))
@@ -289,5 +332,23 @@ function debug.commands.rmcmd(name)
   end
 end
 
+function debug.commands.addinfo(title, ...)
+  local func, err = loadstring(joinWithSpaces(...))
+  
+  if err then
+    return err
+  else
+    debug.addInfo(title, func)
+  end
+end
+
+function debug.commands.rminfo(title)
+  debug.addInfo(title)
+end
+
+-- SETUP --
+debug.addInfo("FPS", love.timer.getFPS)
+debug.addInfo("Entities", function() return ammo.world and ammo.world.count or nil end)
+debug.addInfo("Memory", function() return ("%.2f MB"):format(collectgarbage("count") / 1024) end)
 debug.log("==== ammo-debug 0.1 ====")
 return debug
