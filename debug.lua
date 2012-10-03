@@ -13,6 +13,7 @@ debug.info = { keys = {} }
 
 debug.settings = {
   pauseWorld = true,
+  alwaysShowInfo = true,
   bufferLimit = 1000,
   historyLimit = 100,
   multiEraseTime = 0.35,
@@ -22,6 +23,7 @@ debug.settings = {
 debug.controls = {
   open = "`",
   pause = "",
+  toggleInfo = "",
   up = "pageup",
   down = "pagedown",
   historyUp = "up",
@@ -39,7 +41,7 @@ debug.style = {
   
   -- spacial
   height = 400,
-  infoWidth = math.clamp(love.graphics.width / 4, 250, 400),
+  infoWidth = 300,
   borderSize = 2,
   padding = 10,
   
@@ -261,7 +263,8 @@ function debug.draw()
     if v ~= nil then str = str .. t.title .. s.infoSeparator .. tostring(v) .. "\n" end
   end
   
-  love.graphics.printf(str, love.graphics.width - s.infoWidth + s.padding, s.y + s.padding, s.infoWidth - s.padding * 2)
+  local y = (debug.settings.alwaysShowInfo) and 0 or s.y
+  love.graphics.printf(str, love.graphics.width - s.infoWidth + s.padding, y + s.padding, s.infoWidth - s.padding * 2)
 end
 
 function debug.keypressed(key, code)
@@ -272,6 +275,8 @@ function debug.keypressed(key, code)
     if debug.settings.pauseWorld and ammo.world then ammo.world.active = not debug.opened end
   elseif key == c.pause then
     if ammo.world then ammo.world.active = not ammo.world.active end
+  elseif key == c.toggleInfo then
+    debug.settings.alwaysShowInfo = not debug.settings.alwaysShowInfo
   elseif debug.active then
     if key == c.execute then
       handleInput()
