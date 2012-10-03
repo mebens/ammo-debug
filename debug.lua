@@ -111,7 +111,7 @@ local function handleInput()
     local cmd = debug.commands[terms[1]]
     
     if cmd then
-      table.remove(terms, 1)
+      terms[1] = debug -- replace the name with the self argument
       
       local result, msg = pcall(cmd, unpack(terms))
       if msg then debug.log(msg) end
@@ -157,6 +157,12 @@ end
 
 function debug.removeInfo(title)
   debug.info[title] = nil
+end
+
+function debug.include(t)
+  for k, v in pairs(t) do
+    if type(v) == "function" then debug.commands[k] = v end
+  end
 end
 
 function debug.open(tween)
@@ -278,9 +284,9 @@ function debug.keypressed(key, code)
   end
 end
 
--- COMMANDS --
+-- ESSENTIAL COMMANDS --
 
-function debug.commands.lua(...)
+function debug.commands:lua(...)
   local func, err = loadstring(joinWithSpaces(...))
   
   if err then
@@ -292,58 +298,16 @@ function debug.commands.lua(...)
 end
 
 -- works like the Lua interpreter
-debug.commands["="] = function(...)
-  return debug.commands.lua("return", ...)
+debug.commands["="] = function(self, ...)
+  return self.commands.lua(self, "return", ...)
 end
 
-function debug.commands.clear()
-  debug.buffer = { index = 0 }
+function debug.commands:clear()
+  self.buffer = { index = 0 }
 end
 
-function debug.commands.echo(...)
+function debug.commands:echo(...)
   return joinWithSpaces(...)
-end
-
-function debug.commands.pause()
-  if ammo.world then ammo.world.active = not ammo.world.active end
-end
-
-function debug.commands.mkcmd(...)
-  local args = { ... }
-  local name = args[1]
-  table.remove(args, 1)
-  local func, err = loadstring(joinWithSpaces(unpack(args)))
-  
-  if err then
-    return err
-  else
-    local msg = 'Command "' .. name .. '" has been ' .. (debug.commands[name] and "replaced." or "added.")
-    debug.commands[name] = func
-    return msg
-  end
-end
-
-function debug.commands.rmcmd(name)
-  if debug.commands[name] then
-    debug.commands[name] = nil
-    return 'Command "' .. name .. '" has been removed.'
-  else
-    return 'No command named "' .. name .. '"'
-  end
-end
-
-function debug.commands.addinfo(title, ...)
-  local func, err = loadstring(joinWithSpaces(...))
-  
-  if err then
-    return err
-  else
-    debug.addInfo(title, func)
-  end
-end
-
-function debug.commands.rminfo(title)
-  debug.addInfo(title)
 end
 
 -- SETUP --
