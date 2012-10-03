@@ -1,11 +1,21 @@
 -- commands for modifying the debug module
 local t = {}
 
+local function info(self, f, title, ...)
+  local func, err = loadstring(self._joinWithSpaces(...))
+  
+  if err then
+    return err
+  else
+    f(title, func)
+  end
+end
+
 function t:mkcmd(...)
   local args = { ... }
   local name = args[1]
   table.remove(args, 1)
-  local func, err = loadstring(joinWithSpaces(unpack(args)))
+  local func, err = loadstring(self._joinWithSpaces(unpack(args)))
   
   if err then
     return err
@@ -26,13 +36,11 @@ function t:rmcmd(name)
 end
 
 function t:addinfo(title, ...)
-  local func, err = loadstring(joinWithSpaces(...))
-  
-  if err then
-    return err
-  else
-    self.addInfo(title, func)
-  end
+  info(self, self.addInfo, title, ...)
+end
+
+function t:editinfo(title, ...)
+  info(self, self.updateInfo, title, ...)
 end
 
 function t:rminfo(title)

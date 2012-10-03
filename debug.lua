@@ -9,7 +9,7 @@ debug.input = ""
 debug.history = { index = 0 }
 debug.buffer = { index = 0 }
 debug.commands = {}
-debug.info = {}
+debug.info = { keys = {} }
 
 debug.settings = {
   pauseWorld = true,
@@ -69,20 +69,14 @@ local function makeActive()
   debug.active = true
 end
 
-local function joinWithSpaces(...)
-  local str = ""
-  for _, v in ipairs{...} do str = str .. v .. " " end
-  return str
+local function removeCharacter()
+  debug.input = debug.input:sub(1, #debug.input - 1)
 end
 
 local function addTo(t, v, limit)
   t[#t + 1] = v
   t.index = #t
   if #t > limit then table.remove(t, 1) end
-end
-
-local function removeCharacter()
-  debug.input = debug.input:sub(1, #debug.input - 1)
 end
 
 local function moveConsole(doTween)
@@ -137,6 +131,14 @@ local function handleHistory()
   end
 end
 
+-- this is used by commands outside this file, therefore it can't be local
+function debug._joinWithSpaces(...)
+  local str = ""
+  for _, v in ipairs{...} do str = str .. v .. " " end
+  return str
+end
+
+
 -- FUNCTIONS --
 
 function debug.log(...)
@@ -152,11 +154,19 @@ function debug.log(...)
 end
 
 function debug.addInfo(title, val)
-  debug.info[title] = val
+  debug.info[#debug.info + 1] = { title = title, value = val }
+  debug.info.keys[title] = #debug.info
+end
+
+function debug.updateInfo(title, val)
+  debug.info[debug.info.keys[title]].value = val
 end
 
 function debug.removeInfo(title)
-  debug.info[title] = nil
+  if debug.info.keys[title] then
+    debug.info[debug.info.keys[title]] = nil
+    debug.info.keys[title] = nil
+  end
 end
 
 function debug.include(t)
@@ -245,9 +255,10 @@ function debug.draw()
   -- info
   str = ""
   
-  for k, v in pairs(debug.info) do
+  for _, t in ipairs(debug.info) do
+    local v = t.value
     if type(v) == "function" then v = v() end
-    if v ~= nil then str = str .. k .. s.infoSeparator .. tostring(v) .. "\n" end
+    if v ~= nil then str = str .. t.title .. s.infoSeparator .. tostring(v) .. "\n" end
   end
   
   love.graphics.printf(str, love.graphics.width - s.infoWidth + s.padding, s.y + s.padding, s.infoWidth - s.padding * 2)
@@ -287,7 +298,7 @@ end
 -- ESSENTIAL COMMANDS --
 
 function debug.commands:lua(...)
-  local func, err = loadstring(joinWithSpaces(...))
+  local func, err = loadstring(debug._joinWithSpaces(...))
   
   if err then
     return err
@@ -307,7 +318,7 @@ function debug.commands:clear()
 end
 
 function debug.commands:echo(...)
-  return joinWithSpaces(...)
+  return debug._joinWithSpaces(...)
 end
 
 -- SETUP --
