@@ -47,4 +47,8 @@ function t:rminfo(title)
   self.addInfo(title)
 end
 
+function t:info()
+  self.settings.alwaysShowInfo = not self.settings.alwaysShowInfo
+end
+
 return t

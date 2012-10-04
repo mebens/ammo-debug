@@ -13,7 +13,7 @@ debug.info = { keys = {} }
 
 debug.settings = {
   pauseWorld = true,
-  alwaysShowInfo = true,
+  alwaysShowInfo = false,
   bufferLimit = 1000,
   historyLimit = 100,
   multiEraseTime = 0.35,
