@@ -81,6 +81,16 @@ local function addTo(t, v, limit)
   if #t > limit then table.remove(t, 1) end
 end
 
+local function compileArg(terms, index)
+  local func = loadstring("return " .. terms[index])
+  
+  if func then
+    terms[index] = func()
+  else
+    debug.log("Couldn't compile argument #" .. (index - 1) .. " as string.")
+  end
+end
+
 local function moveConsole(doTween)
   local y = debug.opened and 0 or -debug.style.height - debug.style.borderSize
   if doTween == nil then doTween = true end
@@ -97,28 +107,9 @@ end
 
 local function handleInput()
   debug.log(debug.style.prompt .. debug.input)
-  local terms = {}
-  
-  for t in debug.input:gmatch("[^%s]+") do
-    terms[#terms + 1] = t
-  end
-  
-  if terms[1] then
-    local cmd = debug.commands[terms[1]]
-    
-    if cmd then
-      terms[1] = debug -- replace the name with the self argument
-      
-      local result, msg = pcall(cmd, unpack(terms))
-      if msg then debug.log(msg) end
-    else
-      debug.log('No command named "' .. terms[1] .. '"')
-    end
-    
-    addTo(debug.history, debug.input, debug.settings.bufferLimit)
-    debug.history.index = #debug.history + 1
-  end
-  
+  debug._runCommand(debug.input)
+  addTo(debug.history, debug.input, debug.settings.bufferLimit)
+  debug.history.index = #debug.history + 1  
   debug.input = ""
 end
 
@@ -133,13 +124,52 @@ local function handleHistory()
   end
 end
 
--- this is used by commands outside this file, therefore it can't be local
+-- PUBLIC HELPERS --
+
 function debug._joinWithSpaces(...)
   local str = ""
   for _, v in ipairs{...} do str = str .. v .. " " end
   return str
 end
 
+function debug._runCommand(line)
+  local terms = {}
+  local quotes = false
+  
+  -- split and compile terms
+  for t in line:gmatch("[^%s]+") do
+    if quotes then
+      terms[#terms] = terms[#terms] .. " " .. t
+      
+      if t:match("[\"']$") then
+        quotes = false
+        compileArg(terms, #terms)
+      end  
+    else
+      terms[#terms + 1] = t
+      
+      if t:match("^[\"']") then
+        if t:match("[\"']$") then
+          compileArg(terms, #terms)
+        else
+          quotes = true
+        end
+      end
+    end
+  end
+  
+  if terms[1] then
+    local cmd = debug.commands[terms[1]]
+    
+    if cmd then
+      terms[1] = debug -- replace the name with the self argument
+      local result, msg = pcall(cmd, unpack(terms))
+      if msg then debug.log(msg) end
+    else
+      debug.log('No command named "' .. terms[1] .. '"')
+    end
+  end
+end
 
 -- FUNCTIONS --
 
@@ -152,7 +182,9 @@ function debug.log(...)
     if i < #args then msg = msg .. "    " end
   end
   
-  addTo(debug.buffer, msg, debug.settings.bufferLimit)
+  for line in msg:gmatch("[^\n]+") do
+    addTo(debug.buffer, line, debug.settings.bufferLimit)
+  end
 end
 
 function debug.addInfo(title, val)
@@ -316,6 +348,14 @@ end
 -- works like the Lua interpreter
 debug.commands["="] = function(self, ...)
   return self.commands.lua(self, "return", ...)
+end
+
+function debug.commands:bat(file)
+  if love.filesystem.exists(file) then
+    for line in love.filesystem.lines(file) do debug._runCommand(line) end
+  else
+    return "File doesn't exist."
+  end
 end
 
 function debug.commands:clear()
