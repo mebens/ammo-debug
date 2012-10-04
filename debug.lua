@@ -322,7 +322,7 @@ function debug.keypressed(key, code)
         handleHistory()
       end
     elseif key == c.up then
-      debug.buffer.index = math.max(debug.buffer.index - 1, 1)
+      debug.buffer.index = math.max(debug.buffer.index - 1, 0)
     elseif key == c.down then
       debug.buffer.index = math.min(debug.buffer.index + 1, #debug.buffer)
     elseif code > 31 and code < 127 then
