@@ -17,7 +17,8 @@ debug.settings = {
   bufferLimit = 1000,
   historyLimit = 100,
   multiEraseTime = 0.35,
-  multiEraseCharTime = 0.025
+  multiEraseCharTime = 0.025,
+  initFile = "debug-init"
 }
 
 debug.controls = {
@@ -52,7 +53,7 @@ debug.style = {
   infoSeparator = ": ",
   
   -- misc
-  tween = true,
+  tween = false,
   openTime = 0.1,
   cursorBlinkTime = 0.5
 }
@@ -67,20 +68,19 @@ local timers = {
   blink = -debug.style.cursorBlinkTime -- negative = cursor off, positive = cursor on
 }
 
-local function makeActive()
-  debug.active = true
-end
-
+-- removes the last character from the input line
 local function removeCharacter()
   debug.input = debug.input:sub(1, #debug.input - 1)
 end
 
+-- adds the item to the table, making sure the table's length hasn't exceeded the limit
 local function addTo(t, v, limit)
   t[#t + 1] = v
   t.index = #t
   if #t > limit then table.remove(t, 1) end
 end
 
+-- compile an argument as a string if possible
 local function compileArg(terms, index)
   local func = loadstring("return " .. terms[index])
   
@@ -91,6 +91,17 @@ local function compileArg(terms, index)
   end
 end
 
+-- run a batch file
+local function runBatch(file)
+  for line in love.filesystem.lines(file) do debug._runCommand(line) end
+end
+
+-- used by the tween in moveConsole
+local function makeActive()
+  debug.active = true
+end
+
+-- change the console's position depending on debug.opened
 local function moveConsole(doTween)
   local y = debug.opened and 0 or -debug.style.height - debug.style.borderSize
   if doTween == nil then doTween = true end
@@ -105,6 +116,7 @@ local function moveConsole(doTween)
   end
 end
 
+-- handles the execution of the current input line
 local function handleInput()
   debug.log(debug.style.prompt .. debug.input)
   debug._runCommand(debug.input)
@@ -113,6 +125,7 @@ local function handleInput()
   debug.input = ""
 end
 
+-- displays the currently selected line in the history
 local function handleHistory()
   local i = debug.history.index
   if #debug.history == 0 then return end
@@ -124,14 +137,27 @@ local function handleHistory()
   end
 end
 
+-- resets the console
+local function reset()
+  debug.buffer = { index = 0 }
+  debug.log("==== ammo-debug 0.1 ====")
+  
+  -- initialisation file
+  if love.filesystem.exists(debug.settings.initFile) then
+    runBatch(debug.settings.initFile)
+  end
+end
+
 -- PUBLIC HELPERS --
 
+-- joins a list of strings, separating them with spaces
 function debug._joinWithSpaces(...)
   local str = ""
   for _, v in ipairs{...} do str = str .. v .. " " end
   return str
 end
 
+-- handles the execution of a command (argument splitting, compilation, calling command functions, etc.)
 function debug._runCommand(line)
   local terms = {}
   local quotes = false
@@ -172,6 +198,13 @@ function debug._runCommand(line)
 end
 
 -- FUNCTIONS --
+
+function debug.init()
+  debug.addInfo("FPS", love.timer.getFPS)
+  debug.addInfo("Entities", function() return ammo.world and ammo.world.count or nil end)
+  debug.addInfo("Memory", function() return ("%.2f MB"):format(collectgarbage("count") / 1024) end)
+  reset()
+end
 
 function debug.log(...)
   local msg = ""
@@ -352,7 +385,7 @@ end
 
 function debug.commands:bat(file)
   if love.filesystem.exists(file) then
-    for line in love.filesystem.lines(file) do debug._runCommand(line) end
+    runBatch(file)
   else
     return "File doesn't exist."
   end
@@ -366,9 +399,5 @@ function debug.commands:echo(...)
   return debug._joinWithSpaces(...)
 end
 
--- SETUP --
-debug.addInfo("FPS", love.timer.getFPS)
-debug.addInfo("Entities", function() return ammo.world and ammo.world.count or nil end)
-debug.addInfo("Memory", function() return ("%.2f MB"):format(collectgarbage("count") / 1024) end)
-debug.log("==== ammo-debug 0.1 ====")
+debug.commands.reset = reset
 return debug
