@@ -5,6 +5,8 @@ local debug = {}
 
 debug.opened = false
 debug.active = false
+debug.visible = true
+
 debug.input = ""
 debug.history = { index = 0 }
 debug.buffer = { index = 0 }
@@ -53,7 +55,7 @@ debug.style = {
   infoSeparator = ": ",
   
   -- misc
-  tween = false,
+  tween = true,
   openTime = 0.1,
   cursorBlinkTime = 0.5
 }
@@ -96,9 +98,13 @@ local function runBatch(file)
   for line in love.filesystem.lines(file) do debug._runCommand(line) end
 end
 
--- used by the tween in moveConsole
-local function makeActive()
+-- both these are used by the tween in moveConsole
+local function openEnd()
   debug.active = true
+end
+
+local function closeEnd()
+  debug.visible = false
 end
 
 -- change the console's position depending on debug.opened
@@ -107,12 +113,18 @@ local function moveConsole(doTween)
   if doTween == nil then doTween = true end
   
   if doTween and ammo.ext.tweens then
-    debug.tween = AttrTween:new(debug.style, debug.style.openTime, { y = y }, nil, debug.opened and makeActive or nil)
+    debug.tween = AttrTween:new(debug.style, debug.style.openTime, { y = y }, nil, debug.opened and openEnd or closeEnd)
     debug.tween:start()
-    if not debug.opened then debug.active = false end
+    
+    if debug.opened then
+      debug.visible = true
+    else
+      debug.active = false
+    end
   else
     debug.style.y = y
     debug.active = debug.opened
+    debug.visible = debug.opened
   end
 end
 
@@ -295,41 +307,45 @@ end
 function debug.draw()
   local s = debug.style
   
-  -- background
-  love.graphics.pushColor(s.bgColor)
-  love.graphics.rectangle("fill", 0, s.y, love.graphics.width, s.height)
-  love.graphics.popColor()
-  
-  -- border
-  love.graphics.pushColor(s.borderColor)
-  love.graphics.rectangle("fill", 0, s.y + s.height, love.graphics.width, s.borderSize)
-  love.graphics.popColor()
-  
-  -- text
-  local str = ""
-  local rows = math.floor((s.height - s.padding * 2) / s.font:getHeight())
-  local begin = math.max(debug.buffer.index - rows + 2, 1) -- add 2: one for the input line, another for keeping it in bounds (not sure why its needed)
+  if debug.visible then
+    -- background
+    love.graphics.pushColor(s.bgColor)
+    love.graphics.rectangle("fill", 0, s.y, love.graphics.width, s.height)
+    love.graphics.popColor()
     
-  for i = begin, debug.buffer.index do
-    str = str .. debug.buffer[i] .. "\n"
+    -- border
+    love.graphics.pushColor(s.borderColor)
+    love.graphics.rectangle("fill", 0, s.y + s.height, love.graphics.width, s.borderSize)
+    love.graphics.popColor()
+    
+    -- text
+    local str = ""
+    local rows = math.floor((s.height - s.padding * 2) / s.font:getHeight())
+    local begin = math.max(debug.buffer.index - rows + 2, 1) -- add 2: one for the input line, another for keeping it in bounds (not sure why its needed)
+      
+    for i = begin, debug.buffer.index do
+      str = str .. debug.buffer[i] .. "\n"
+    end
+    
+    str = str .. s.prompt .. debug.input
+    if timers.blink > 0 then str = str .. s.cursor end
+    love.graphics.setFont(s.font)
+    love.graphics.printf(str, s.padding, s.y + s.padding, love.graphics.width - s.infoWidth - s.padding * 2)
   end
   
-  str = str .. s.prompt .. debug.input
-  if timers.blink > 0 then str = str .. s.cursor end
-  love.graphics.setFont(s.font)
-  love.graphics.printf(str, s.padding, s.y + s.padding, love.graphics.width - s.infoWidth - s.padding * 2)
-  
-  -- info
-  str = ""
-  
-  for _, t in ipairs(debug.info) do
-    local v = t.value
-    if type(v) == "function" then v = v() end
-    if v ~= nil then str = str .. t.title .. s.infoSeparator .. tostring(v) .. "\n" end
+  if debug.visible or debug.settings.alwaysShowInfo then
+    -- info
+    str = ""
+    
+    for _, t in ipairs(debug.info) do
+      local v = t.value
+      if type(v) == "function" then v = v() end
+      if v ~= nil then str = str .. t.title .. s.infoSeparator .. tostring(v) .. "\n" end
+    end
+    
+    local y = (debug.settings.alwaysShowInfo) and 0 or s.y
+    love.graphics.printf(str, love.graphics.width - s.infoWidth + s.padding, y + s.padding, s.infoWidth - s.padding * 2)
   end
-  
-  local y = (debug.settings.alwaysShowInfo) and 0 or s.y
-  love.graphics.printf(str, love.graphics.width - s.infoWidth + s.padding, y + s.padding, s.infoWidth - s.padding * 2)
 end
 
 function debug.keypressed(key, code)
