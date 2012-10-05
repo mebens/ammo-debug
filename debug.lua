@@ -407,6 +407,11 @@ function debug.commands:bat(file)
   end
 end
 
+debug.commands["repeat"] = function(self, times, ...)
+  local cmd = debug._joinWithSpaces(...)
+  for i = 1, tonumber(times) do debug._runCommand(cmd) end
+end
+
 function debug.commands:clear()
   self.buffer = { index = 0 }
 end
