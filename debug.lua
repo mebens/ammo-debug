@@ -64,6 +64,7 @@ debug.style.y = -debug.style.height
 
 -- LOCAL --
 
+-- a few timer variables
 local timers = {
   multiErase = 0,
   multiEraseChar = 0,
@@ -83,14 +84,20 @@ local function addTo(t, v, limit)
 end
 
 -- compile an argument as a string if possible
-local function compileArg(terms, index)
-  local func = loadstring("return " .. terms[index])
-  
-  if func then
-    terms[index] = func()
-  else
-    debug.log("Couldn't compile argument #" .. (index - 1) .. " as string.")
+local function compileArg(arg)
+  if arg:sub(1, 1) == "$" then
+    arg = debug._runCommand(arg:match("^$(.+)$$"), true)
+  else  
+    local func = loadstring("return " .. arg)
+    
+    if func then
+      arg = func()
+    else
+      debug.log("Couldn't compile argument #" .. (index - 1) .. " as string.")
+    end
   end
+  
+  return arg
 end
 
 -- run a batch file
@@ -165,12 +172,13 @@ end
 -- joins a list of strings, separating them with spaces
 function debug._joinWithSpaces(...)
   local str = ""
-  for _, v in ipairs{...} do str = str .. v .. " " end
+  local args = { ... }
+  for i, v in ipairs(args) do str = str .. v .. (i == #args and "" or " ") end
   return str
 end
 
 -- handles the execution of a command (argument splitting, compilation, calling command functions, etc.)
-function debug._runCommand(line)
+function debug._runCommand(line, ret)
   local terms = {}
   local quotes = false
   
@@ -178,21 +186,14 @@ function debug._runCommand(line)
   for t in line:gmatch("[^%s]+") do
     if quotes then
       terms[#terms] = terms[#terms] .. " " .. t
-      
-      if t:match("[\"']$") then
-        quotes = false
-        compileArg(terms, #terms)
-      end  
     else
       terms[#terms + 1] = t
-      
-      if t:match("^[\"']") then
-        if t:match("[\"']$") then
-          compileArg(terms, #terms)
-        else
-          quotes = true
-        end
-      end
+      quotes = t:match("^[\"'$]")
+    end
+    
+    if quotes and t:sub(-1) == quotes then
+      quotes = false
+      terms[#terms] = compileArg(terms[#terms])
     end
   end
   
@@ -202,7 +203,14 @@ function debug._runCommand(line)
     if cmd then
       terms[1] = debug -- replace the name with the self argument
       local result, msg = pcall(cmd, unpack(terms))
-      if msg then debug.log(msg) end
+      
+      if msg then
+        if ret then
+          return msg
+        else
+          debug.log(msg)
+        end
+      end
     else
       debug.log('No command named "' .. terms[1] .. '"')
     end
