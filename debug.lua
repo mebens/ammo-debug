@@ -10,8 +10,8 @@ debug.visible = true
 debug.input = ""
 debug.history = { index = 0 }
 debug.buffer = { index = 0 }
-debug.commands = {}
 debug.info = { keys = {} }
+debug.commands = {}
 
 debug.settings = {
   pauseWorld = true,
@@ -257,8 +257,12 @@ function debug.removeInfo(title)
 end
 
 function debug.include(t)
-  for k, v in pairs(t) do
-    if type(v) == "function" then debug.commands[k] = v end
+  for k, v in pairs(t) do 
+    if type(v) == "function" then
+      debug.commands[k] = v
+    elseif k == "help" then
+      for cmd, docs in pairs(v) do debug.help[cmd] = docs end
+    end
   end
 end
 
@@ -429,4 +433,79 @@ function debug.commands:echo(...)
 end
 
 debug.commands.reset = reset
+
+function debug.commands:help(cmd)
+  if not cmd then
+    for name in pairs(debug.commands) do
+      local str = name
+      local docs = debug.help[name]
+      
+      if docs then
+        if docs.args then str = str .. " " .. docs.args end
+        if docs.summary then str = str .. " -- " .. docs.summary end
+      end
+      
+      debug.log(str)
+    end
+  elseif debug.commands[cmd] then
+    local docs = debug.help[cmd]
+    
+    if docs then
+      local str = "SYNTAX\n" .. cmd
+      if docs.args then str = str .. " " .. docs.args end
+      if docs.summary then str = str .. "\n \nSUMMARY\n" .. docs.summary end
+      if docs.description then str = str .. "\n \nDESCRIPTION\n" .. docs.description end
+      if docs.example then str = str .. "\n \nEXAMPLE\n" .. docs.example end
+      return str
+    else
+      return 'No documentation for "' .. cmd .. '"'
+    end
+  else
+    return 'No command named "' .. cmd .. '"'
+  end
+end
+
+-- COMMAND DOCUMENTATION --
+
+debug.help = {
+  lua = {
+    args = "code...",
+    summary = "Compiles and executes Lua code. Returns the result.",
+    example = "> lua function globalFunc() return 3 ^ 2 end\n> lua return globalFunc()\n9"
+  },
+  
+  ["="] = {
+    args = "code...",
+    summary = "Executes Lua code, but also prefixes the return statement to the code.",
+    description = "Compiles and executes Lua code, much like the lua command.\nHowever, it prefixes the return statement to the code.\nFor example, \"= 3 + 4\" is the same as \"lua return 3 + 4\"."
+  },
+  
+  bat = {
+    args = "file",
+    summary = "Executes a batch file containing multiple commands.",
+    description = "Executes a batch file. A batch file is a text which contains multiple commands which can be executed on the console."
+  },
+  
+  ["repeat"] = {
+    args = "num-times command [args...]",
+    summary = "Repeats a command multiple times.",
+    example = "> repeat 3 echo hello\nhello\nhello\nhello"
+  },
+  
+  clear = {
+    summary = "Clears the console's text buffer."
+  },
+  
+  echo = {
+    args = "text...",
+    summary = "Outputs the text given.",
+    example = "> echo foo bar \"la la\"\nfoo bar la la"
+  },
+  
+  help = {
+    args = "[command]",
+    summary = "Lists all available commands or provides documentation for a specific command."
+  }
+}
+
 return debug
