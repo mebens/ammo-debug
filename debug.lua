@@ -188,7 +188,17 @@ end
 function debug._joinWithSpaces(...)
   local str = ""
   local args = { ... }
-  for i, v in ipairs(args) do str = str .. v .. (i == #args and "" or " ") end
+  
+  for i, v in ipairs(args) do
+    if type(v) == "boolean" then
+      v = v and "true" or "false"
+    else
+      v = tostring(v)
+    end
+    
+    str = str .. v .. (i == #args and "" or " ")
+  end
+  
   return str
 end
 
