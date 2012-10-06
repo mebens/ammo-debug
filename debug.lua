@@ -14,6 +14,7 @@ debug.buffer = { index = 0 }
 debug.info = { keys = {} }
 debug.commands = {}
 
+-- other settings which aren't really visual styling
 debug.settings = {
   pauseWorld = true, -- pause world when console is opened
   alwaysShowInfo = false, -- show info even when console is closed
@@ -26,6 +27,7 @@ debug.settings = {
   initFile = "debug-init" -- if present, this batch file will be executed on initialisation
 }
 
+-- keyboard controls
 debug.controls = {
   open = "`",
   pause = "",
@@ -39,7 +41,7 @@ debug.controls = {
   execute = "return"
 }
 
--- visual 
+-- visual style settings
 debug.style = {
   -- color
   color = { 240, 240, 240, 255 },

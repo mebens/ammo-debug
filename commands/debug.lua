@@ -11,6 +11,37 @@ local function info(self, f, title, ...)
   end
 end
 
+local function setValue(t, key, ...)
+  local base = t[key]
+  local values = { ... }
+  
+  if type(base) == "number" then
+    t[key] = tonumber(values[1])
+  elseif type(base) == "boolean" then
+    t[key] = values[1] == "true"
+  elseif type(base) == "table" then
+    for i, v in ipairs(values) do setValue(t[key], i, v) end
+  elseif type(base) == "string" then
+    t[key] = values[1] == nil and "" or tostring(values[1])
+  end
+end
+
+function t:set(name, val, ...)
+  if name == "control" then
+    if self.controls[val] then
+      setValue(self.controls, val, ...)
+    else
+      return 'No control named "' .. val .. '"'
+    end
+  elseif self.settings[name] then
+    setValue(self.settings, name, val, ...)
+  elseif self.style[name] then
+    setValue(self.style, name, val, ...)
+  else
+    return 'No setting named "' .. name .. '"'
+  end
+end
+
 function t:mkcmd(...)
   local args = { ... }
   local name = args[1]
