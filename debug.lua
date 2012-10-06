@@ -5,7 +5,7 @@ local debug = {}
 
 debug.opened = false
 debug.active = false
-debug.visible = true
+debug.visible = false
 
 debug.input = ""
 debug.history = { index = 0 }
@@ -14,13 +14,14 @@ debug.info = { keys = {} }
 debug.commands = {}
 
 debug.settings = {
-  pauseWorld = true,
-  alwaysShowInfo = false,
-  bufferLimit = 1000,
-  historyLimit = 100,
+  pauseWorld = true, -- pause world when console is opened
+  alwaysShowInfo = false, -- show info even when console is closed
+  bufferLimit = 1000, -- maximum lines in the buffer
+  historyLimit = 100, -- maximum entries in the command history
   multiEraseTime = 0.35,
   multiEraseCharTime = 0.025,
-  initFile = "debug-init"
+  initFile = "debug-init", -- if present, this batch file will be executed on initialisation
+  printOutput = true -- debug.log will also print to the standard output
 }
 
 debug.controls = {
@@ -83,6 +84,13 @@ local function addTo(t, v, limit)
   if #t > limit then table.remove(t, 1) end
 end
 
+-- adds the text to the buffer, making sure to split it into separate lines
+local function addToBuffer(str)
+  for line in str:gmatch("[^\n]+") do
+    addTo(debug.buffer, line, debug.settings.bufferLimit)
+  end
+end
+
 -- compile an argument as a string if possible
 local function compileArg(arg)
   if arg:sub(1, 1) == "$" then
@@ -137,7 +145,7 @@ end
 
 -- handles the execution of the current input line
 local function handleInput()
-  debug.log(debug.style.prompt .. debug.input)
+  addToBuffer(debug.style.prompt .. debug.input)
   debug._runCommand(debug.input)
   addTo(debug.history, debug.input, debug.settings.bufferLimit)
   debug.history.index = #debug.history + 1  
@@ -227,17 +235,9 @@ function debug.init()
 end
 
 function debug.log(...)
-  local msg = ""
-  local args = {...}
-  
-  for i, v in ipairs(args) do
-    msg = msg .. tostring(v)
-    if i < #args then msg = msg .. "    " end
-  end
-  
-  for line in msg:gmatch("[^\n]+") do
-    addTo(debug.buffer, line, debug.settings.bufferLimit)
-  end
+  local msg = debug._joinWithSpaces(...)
+  addToBuffer(msg)
+  if debug.settings.printOutput then print(msg) end
 end
 
 function debug.addInfo(title, val)
