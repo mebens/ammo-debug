@@ -1,7 +1,7 @@
 -- commands for modifying the debug module
 local t = {}
 
-local function info(self, f, title, ...)
+local function info(self, f, title, graph, ...)
   local func, err = loadstring(self._joinWithSpaces(...))
   
   if err then
@@ -67,12 +67,18 @@ function t:rmcmd(name)
 end
 
 function t:addinfo(title, ...)
-  info(self, self.addInfo, title, ...)
+  info(self, self.addInfo, title, false, ...)
+end
+
+function t:addgraph(title, ...)
+  info(self, self.addGraph, title, true, ...)
 end
 
 function t:rminfo(title)
-  self.addInfo(title)
+  self.removeInfo(title)
 end
+
+t.rmgraph = t.rminfo
 
 function t:info()
   self.settings.alwaysShowInfo = not self.settings.alwaysShowInfo

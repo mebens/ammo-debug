@@ -11,7 +11,7 @@ debug.visible = false
 debug.input = ""
 debug.history = { index = 0 }
 debug.buffer = { index = 0 }
-debug.info = { keys = {} }
+debug.info = {}
 debug.commands = {}
 
 -- other settings which aren't really visual styling
@@ -272,13 +272,14 @@ function debug.addGraph(title, func, funcOrInterval, interval)
   end
   
   debug.info[#debug.info + 1] = info
-  debug.info.keys[title] = #debug.info
 end
 
 function debug.removeInfo(title)
-  if debug.info.keys[title] then
-    debug.info[debug.info.keys[title]] = nil
-    debug.info.keys[title] = nil
+  for i = 1, #debug.info do
+    if debug.info[i].title == title then
+      table.remove(debug.info, i)
+      break
+    end
   end
 end
 
