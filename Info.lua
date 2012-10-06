@@ -1,5 +1,13 @@
 local Info = class("Info")
 
+local function formatNumber(num)
+  if math.round(num) == num then
+    return tostring(num)
+  else
+    return ("%.1f"):format(num)
+  end
+end
+
 function Info:initialize(debug, title, func, graph, interval, numFunc)
   self.title = title
   self.source = func
@@ -12,7 +20,7 @@ function Info:initialize(debug, title, func, graph, interval, numFunc)
   
   self.dsettings = debug.settings
   self.dstyle = debug.style
-  self.data = { min = 1, max = 1 }
+  self.data = {}
   self.timer = self.interval
   self.alwaysRecord = self.graph
 end
@@ -26,8 +34,8 @@ function Info:update(dt)
     
     if type(n) == "number" then
       self.data[#self.data + 1] = n
-      self.data.min = math.min(self.data.min, n)
-      self.data.max = math.max(self.data.max, n)
+      self.data.min = self.data.min and math.min(self.data.min, n) or n
+      self.data.max = self.data.max and math.max(self.data.max, n) or n
       
       local maxEntries = math.floor((self.dstyle.infoWidth - self.dstyle.padding * 2) / self.spacing)
       while #self.data > maxEntries do table.remove(self.data, 1) end
@@ -40,8 +48,9 @@ end
 function Info:draw(x, y)
   local s = self.dstyle
   local width = s.infoWidth - s.padding * 2
-  local yOffset = s.font:getHeight()
+  local yOffset = s.font:getHeight() + self.padding
   
+  -- info text
   love.graphics.pushColor(s.color)
   love.graphics.setFont(s.font)
   love.graphics.printf(self.title .. s.infoSeparator .. tostring(self.source()), x, y, width)
@@ -50,20 +59,27 @@ function Info:draw(x, y)
   if self.dsettings.drawGraphs and self.graph then
     local x1, y1
     local x2, y2
-    yOffset = yOffset + self.padding
     
     local lineStyle = love.graphics.getLineStyle()
     love.graphics.setLine(1, s.graphLineStyle)
     love.graphics.pushColor(s.graphColor)
     
+    -- graph lines
     for i = 1, #self.data do
       local n = self.data[i]
       x2 = x + self.spacing * (i - 1)
-      y2 = y + yOffset + self.height - self.height * (n / self.data.max)
+      y2 = y + yOffset + self.height - self.height * math.scale(n, self.data.min, self.data.max, 0, 1)
       if not x1 then x1, y1 = x2, y2 end
       love.graphics.line(x1, y1, x2, y2)
       x1, y1 = x2, y2
     end
+    
+    -- min/max text
+    love.graphics.setFont(s.graphFont)
+    love.graphics.pushColor(s.graphTextColor)
+    love.graphics.printf(formatNumber(self.data.max), x, y + yOffset, width, "right")
+    love.graphics.printf(formatNumber(self.data.min), x, y + yOffset + self.height - s.graphFont:getHeight(), width, "right")
+    love.graphics.popColor()
     
     yOffset = yOffset + self.height
     love.graphics.popColor()

@@ -47,8 +47,11 @@ debug.style = {
   color = { 240, 240, 240, 255 },
   bgColor = { 0, 0, 0, 200 },
   borderColor = { 200, 200, 200, 220 },
+  graphColor = { 180, 180, 180, 255 },
+  graphTextColor = { 255, 255, 255, 255 },
   
   -- spacial
+  y = -1000,
   height = 400,
   infoWidth = 300,
   borderSize = 2,
@@ -56,6 +59,7 @@ debug.style = {
   
   -- text
   font = love.graphics.newFont(path:gsub("%.", "/") .. "/inconsolata.otf", 18),
+  graphFont = love.graphics.newFont(path:gsub("%.", "/") .. "/inconsolata.otf", 14),
   prompt = "> ",
   cursor = "|",
   infoSeparator = ": ",
@@ -66,9 +70,6 @@ debug.style = {
   openTime = 0.1,
   graphLineStyle = "rough"
 }
-
-debug.style.y = -debug.style.height
-debug.style.graphColor = table.copy(debug.style.color)
 
 -- LOCAL --
 
@@ -245,10 +246,13 @@ end
 -- FUNCTIONS --
 
 function debug.init()
+  debug.style.y = -debug.style.height
+  reset()
+  
+  -- default info graphs
   debug.addGraph("FPS", love.timer.getFPS)
   debug.addGraph("Memory", function() return ("%.2f MB"):format(collectgarbage("count") / 1024) end, function() return collectgarbage("count") / 1024 end)
   debug.addGraph("Entities", function() return ammo.world and ammo.world.count or nil end)
-  reset()
 end
 
 function debug.log(...)
