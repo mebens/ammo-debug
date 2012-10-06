@@ -1,5 +1,6 @@
 local path = ({...})[1]:gsub("%.debug$", "")
 local debug = {}
+local Info = require(path .. ".Info")
 
 -- PROPERTIES/SETTINGS --
 
@@ -16,18 +17,20 @@ debug.commands = {}
 debug.settings = {
   pauseWorld = true, -- pause world when console is opened
   alwaysShowInfo = false, -- show info even when console is closed
+  drawGraphs = false,
+  printOutput = false, -- debug.log will also print to the standard output
   bufferLimit = 1000, -- maximum lines in the buffer
   historyLimit = 100, -- maximum entries in the command history
   multiEraseTime = 0.35,
   multiEraseCharTime = 0.025,
-  initFile = "debug-init", -- if present, this batch file will be executed on initialisation
-  printOutput = true -- debug.log will also print to the standard output
+  initFile = "debug-init" -- if present, this batch file will be executed on initialisation
 }
 
 debug.controls = {
   open = "`",
   pause = "",
   toggleInfo = "",
+  toggleGraphs = "",
   up = "pageup",
   down = "pagedown",
   historyUp = "up",
@@ -55,13 +58,15 @@ debug.style = {
   cursor = "|",
   infoSeparator = ": ",
   
-  -- misc
+  -- other
+  cursorBlinkTime = 0.5,
   tween = true,
   openTime = 0.1,
-  cursorBlinkTime = 0.5
+  graphLineStyle = "rough"
 }
 
 debug.style.y = -debug.style.height
+debug.style.graphColor = table.copy(debug.style.color)
 
 -- LOCAL --
 
@@ -80,8 +85,8 @@ end
 -- adds the item to the table, making sure the table's length hasn't exceeded the limit
 local function addTo(t, v, limit)
   t[#t + 1] = v
-  t.index = #t
   if #t > limit then table.remove(t, 1) end
+  t.index = #t
 end
 
 -- adds the text to the buffer, making sure to split it into separate lines
@@ -228,9 +233,9 @@ end
 -- FUNCTIONS --
 
 function debug.init()
-  debug.addInfo("FPS", love.timer.getFPS)
-  debug.addInfo("Entities", function() return ammo.world and ammo.world.count or nil end)
-  debug.addInfo("Memory", function() return ("%.2f MB"):format(collectgarbage("count") / 1024) end)
+  debug.addGraph("FPS", love.timer.getFPS)
+  debug.addGraph("Memory", function() return ("%.2f MB"):format(collectgarbage("count") / 1024) end, function() return collectgarbage("count") / 1024 end)
+  debug.addGraph("Entities", function() return ammo.world and ammo.world.count or nil end)
   reset()
 end
 
@@ -240,13 +245,22 @@ function debug.log(...)
   if debug.settings.printOutput then print(msg) end
 end
 
-function debug.addInfo(title, val)
-  debug.info[#debug.info + 1] = { title = title, value = val }
+function debug.addInfo(title, func)
+  debug.info[#debug.info + 1] = Info:new(debug, title, func, false)
   debug.info.keys[title] = #debug.info
 end
 
-function debug.updateInfo(title, val)
-  debug.info[debug.info.keys[title]].value = val
+function debug.addGraph(title, func, funcOrInterval, interval)
+  local info
+  
+  if type(funcOrInterval) == "function" then
+    info = Info:new(debug, title, func, true, interval, funcOrInterval)
+  else
+    info = Info:new(debug, title, func, true, funcOrInterval)
+  end
+  
+  debug.info[#debug.info + 1] = info
+  debug.info.keys[title] = #debug.info
 end
 
 function debug.removeInfo(title)
@@ -313,6 +327,7 @@ function debug.update(dt)
     end
   end
   
+  for _, info in ipairs(debug.info) do info:update(dt) end
   if debug.tween and debug.tween.active then debug.tween:update(dt) end
 end
 
@@ -346,17 +361,9 @@ function debug.draw()
   end
   
   if debug.visible or debug.settings.alwaysShowInfo then
-    -- info
-    str = ""
-    
-    for _, t in ipairs(debug.info) do
-      local v = t.value
-      if type(v) == "function" then v = v() end
-      if v ~= nil then str = str .. t.title .. s.infoSeparator .. tostring(v) .. "\n" end
-    end
-    
-    local y = (debug.settings.alwaysShowInfo) and 0 or s.y
-    love.graphics.printf(str, love.graphics.width - s.infoWidth + s.padding, y + s.padding, s.infoWidth - s.padding * 2)
+    local x = love.graphics.width - s.infoWidth + s.padding
+    local y = (debug.settings.alwaysShowInfo and 0 or s.y) + s.padding
+    for _, info in ipairs(debug.info) do y = y + info:draw(x, y) end
   end
 end
 
@@ -370,6 +377,8 @@ function debug.keypressed(key, code)
     if ammo.world then ammo.world.active = not ammo.world.active end
   elseif key == c.toggleInfo then
     debug.settings.alwaysShowInfo = not debug.settings.alwaysShowInfo
+  elseif key == c.toggleGraphs then
+    debug.settings.drawGraphs = not debug.settings.drawGraphs
   elseif debug.active then
     if key == c.execute then
       handleInput()

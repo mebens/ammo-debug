@@ -39,16 +39,16 @@ function t:addinfo(title, ...)
   info(self, self.addInfo, title, ...)
 end
 
-function t:editinfo(title, ...)
-  info(self, self.updateInfo, title, ...)
-end
-
 function t:rminfo(title)
   self.addInfo(title)
 end
 
 function t:info()
   self.settings.alwaysShowInfo = not self.settings.alwaysShowInfo
+end
+
+function t:graphs()
+  self.settings.drawGraphs = not self.settings.drawGraphs
 end
 
 return t
