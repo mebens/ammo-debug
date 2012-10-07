@@ -35,8 +35,6 @@ function t:set(name, val, ...)
     end
   elseif self.settings[name] then
     setValue(self.settings, name, val, ...)
-  elseif self.style[name] then
-    setValue(self.style, name, val, ...)
   else
     return 'No setting named "' .. name .. '"'
   end

@@ -7,6 +7,7 @@ local Info = require(path .. ".Info")
 debug.opened = false
 debug.active = false
 debug.visible = false
+debug.y = -1000
 
 debug.input = ""
 debug.history = { index = 0 }
@@ -14,17 +15,47 @@ debug.buffer = { index = 0 }
 debug.info = {}
 debug.commands = {}
 
--- other settings which aren't really visual styling
 debug.settings = {
+  -- booleans
   pauseWorld = true, -- pause world when console is opened
   alwaysShowInfo = false, -- show info even when console is closed
   drawGraphs = false,
   printOutput = false, -- debug.log will also print to the standard output
+  tween = true,
+  
+  -- limits
   bufferLimit = 1000, -- maximum lines in the buffer
   historyLimit = 100, -- maximum entries in the command history
+  
+  -- timing
   multiEraseTime = 0.35,
   multiEraseCharTime = 0.025,
-  initFile = "debug-init" -- if present, this batch file will be executed on initialisation
+  cursorBlinkTime = 0.5,
+  openTime = 0.1,
+  
+  -- spacial
+  height = 400,
+  infoWidth = 300,
+  borderSize = 2,
+  padding = 10,
+  
+  -- colors
+  color = { 240, 240, 240, 255 },
+  bgColor = { 0, 0, 0, 200 },
+  borderColor = { 200, 200, 200, 220 },
+  graphColor = { 180, 180, 180, 255 },
+  graphTextColor = { 255, 255, 255, 255 },
+  
+  -- text
+  font = love.graphics.newFont(path:gsub("%.", "/") .. "/inconsolata.otf", 18),
+  graphFont = love.graphics.newFont(path:gsub("%.", "/") .. "/inconsolata.otf", 14),
+  prompt = "> ",
+  cursor = "|",
+  infoSeparator = ": ",
+  
+  -- other
+  initFile = "debug-init", -- if present, this batch file will be executed on initialisation
+  graphLineStyle = "rough"
 }
 
 -- keyboard controls
@@ -41,43 +72,13 @@ debug.controls = {
   execute = "return"
 }
 
--- visual style settings
-debug.style = {
-  -- color
-  color = { 240, 240, 240, 255 },
-  bgColor = { 0, 0, 0, 200 },
-  borderColor = { 200, 200, 200, 220 },
-  graphColor = { 180, 180, 180, 255 },
-  graphTextColor = { 255, 255, 255, 255 },
-  
-  -- spacial
-  y = -1000,
-  height = 400,
-  infoWidth = 300,
-  borderSize = 2,
-  padding = 10,
-  
-  -- text
-  font = love.graphics.newFont(path:gsub("%.", "/") .. "/inconsolata.otf", 18),
-  graphFont = love.graphics.newFont(path:gsub("%.", "/") .. "/inconsolata.otf", 14),
-  prompt = "> ",
-  cursor = "|",
-  infoSeparator = ": ",
-  
-  -- other
-  cursorBlinkTime = 0.5,
-  tween = true,
-  openTime = 0.1,
-  graphLineStyle = "rough"
-}
-
 -- LOCAL --
 
 -- a few timer variables
 local timers = {
   multiErase = 0,
   multiEraseChar = 0,
-  blink = -debug.style.cursorBlinkTime -- negative = cursor off, positive = cursor on
+  blink = -debug.settings.cursorBlinkTime -- negative = cursor off, positive = cursor on
 }
 
 -- removes the last character from the input line
@@ -132,11 +133,11 @@ end
 
 -- change the console's position depending on debug.opened
 local function moveConsole(doTween)
-  local y = debug.opened and 0 or -debug.style.height - debug.style.borderSize
+  local y = debug.opened and 0 or -debug.settings.height - debug.settings.borderSize
   if doTween == nil then doTween = true end
   
   if doTween and ammo.ext.tweens then
-    debug.tween = AttrTween:new(debug.style, debug.style.openTime, { y = y }, nil, debug.opened and openEnd or closeEnd)
+    debug.tween = AttrTween:new(debug, debug.settings.openTime, { y = y }, nil, debug.opened and openEnd or closeEnd)
     debug.tween:start()
     
     if debug.opened then
@@ -145,7 +146,7 @@ local function moveConsole(doTween)
       debug.active = false
     end
   else
-    debug.style.y = y
+    debug.y = y
     debug.active = debug.opened
     debug.visible = debug.opened
   end
@@ -153,7 +154,7 @@ end
 
 -- handles the execution of the current input line
 local function handleInput()
-  addToBuffer(debug.style.prompt .. debug.input)
+  addToBuffer(debug.settings.prompt .. debug.input)
   debug._runCommand(debug.input)
   addTo(debug.history, debug.input, debug.settings.bufferLimit)
   debug.history.index = #debug.history + 1  
@@ -246,7 +247,7 @@ end
 -- FUNCTIONS --
 
 function debug.init()
-  debug.style.y = -debug.style.height
+  debug.y = -debug.settings.height
   reset()
   
   -- default info graphs
@@ -299,17 +300,17 @@ end
 
 function debug.open(tween)
   debug.opened = true
-  moveConsole(tween or debug.style.tween)
+  moveConsole(tween or debug.settings.tween)
 end
 
 function debug.close(tween)
   debug.opened = false
-  moveConsole(tween or debug.style.tween)
+  moveConsole(tween or debug.settings.tween)
 end
 
 function debug.toggle(tween)
   debug.opened = not debug.opened
-  moveConsole(tween or debug.style.tween)
+  moveConsole(tween or debug.settings.tween)
 end
 
 -- CALLBACKS --
@@ -337,8 +338,8 @@ function debug.update(dt)
     end
     
     -- cursor blink
-    if timers.blink >= debug.style.cursorBlinkTime then
-      timers.blink = -debug.style.cursorBlinkTime
+    if timers.blink >= debug.settings.cursorBlinkTime then
+      timers.blink = -debug.settings.cursorBlinkTime
     else
       timers.blink = timers.blink + dt
     end
@@ -349,17 +350,17 @@ function debug.update(dt)
 end
 
 function debug.draw()
-  local s = debug.style
+  local s = debug.settings
   
   if debug.visible then
     -- background
     love.graphics.pushColor(s.bgColor)
-    love.graphics.rectangle("fill", 0, s.y, love.graphics.width, s.height)
+    love.graphics.rectangle("fill", 0, debug.y, love.graphics.width, s.height)
     love.graphics.popColor()
     
     -- border
     love.graphics.pushColor(s.borderColor)
-    love.graphics.rectangle("fill", 0, s.y + s.height, love.graphics.width, s.borderSize)
+    love.graphics.rectangle("fill", 0, debug.y + s.height, love.graphics.width, s.borderSize)
     love.graphics.popColor()
     
     -- text
@@ -374,12 +375,12 @@ function debug.draw()
     str = str .. s.prompt .. debug.input
     if timers.blink > 0 then str = str .. s.cursor end
     love.graphics.setFont(s.font)
-    love.graphics.printf(str, s.padding, s.y + s.padding, love.graphics.width - s.infoWidth - s.padding * 2)
+    love.graphics.printf(str, s.padding, debug.y + s.padding, love.graphics.width - s.infoWidth - s.padding * 2)
   end
   
-  if debug.visible or debug.settings.alwaysShowInfo then
+  if debug.visible or s.alwaysShowInfo then
     local x = love.graphics.width - s.infoWidth + s.padding
-    local y = (debug.settings.alwaysShowInfo and 0 or s.y) + s.padding
+    local y = (s.alwaysShowInfo and 0 or debug.y) + s.padding
     for _, info in ipairs(debug.info) do y = y + info:draw(x, y) end
   end
 end

@@ -19,7 +19,6 @@ function Info:initialize(debug, title, func, graph, interval, numFunc)
   self.padding = 3
   
   self.dsettings = debug.settings
-  self.dstyle = debug.style
   self.data = {}
   self.timer = self.interval
   self.alwaysRecord = self.graph
@@ -37,7 +36,7 @@ function Info:update(dt)
       self.data.min = self.data.min and math.min(self.data.min, n) or n
       self.data.max = self.data.max and math.max(self.data.max, n) or n
       
-      local maxEntries = math.floor((self.dstyle.infoWidth - self.dstyle.padding * 2) / self.spacing)
+      local maxEntries = math.floor((self.dsettings.infoWidth - self.dsettings.padding * 2) / self.spacing)
       while #self.data > maxEntries do table.remove(self.data, 1) end
     end
   else
@@ -46,7 +45,7 @@ function Info:update(dt)
 end
 
 function Info:draw(x, y)
-  local s = self.dstyle
+  local s = self.dsettings
   local width = s.infoWidth - s.padding * 2
   local yOffset = s.font:getHeight() + self.padding
   
