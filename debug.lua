@@ -17,9 +17,9 @@ debug.commands = {}
 
 debug.settings = {
   -- booleans
-  pauseWorld = true, -- pause world when console is opened
   alwaysShowInfo = false, -- show info even when console is closed
   drawGraphs = false,
+  pauseWorld = true, -- pause world when console is opened
   printOutput = false, -- debug.log will also print to the standard output
   tween = true,
   
@@ -423,7 +423,7 @@ end
 -- ESSENTIAL COMMANDS --
 
 function debug.commands:lua(...)
-  local func, err = loadstring(debug._joinWithSpaces(...))
+  local func, err = loadstring(self._joinWithSpaces(...))
   
   if err then
     return err
@@ -448,7 +448,7 @@ end
 
 debug.commands["repeat"] = function(self, times, ...)
   local cmd = debug._joinWithSpaces(...)
-  for i = 1, tonumber(times) do debug._runCommand(cmd) end
+  for i = 1, tonumber(times) do self._runCommand(cmd) end
 end
 
 function debug.commands:clear()
@@ -456,26 +456,26 @@ function debug.commands:clear()
 end
 
 function debug.commands:echo(...)
-  return debug._joinWithSpaces(...)
+  return self._joinWithSpaces(...)
 end
 
 debug.commands.reset = reset
 
 function debug.commands:help(cmd)
   if not cmd then
-    for name in pairs(debug.commands) do
+    for name in pairs(self.commands) do
       local str = name
-      local docs = debug.help[name]
+      local docs = self.help[name]
       
       if docs then
         if docs.args then str = str .. " " .. docs.args end
         if docs.summary then str = str .. " -- " .. docs.summary end
       end
       
-      debug.log(str)
+      self.log(str)
     end
-  elseif debug.commands[cmd] then
-    local docs = debug.help[cmd]
+  elseif self.commands[cmd] then
+    local docs = self.help[cmd]
     
     if docs then
       local str = "SYNTAX\n" .. cmd
