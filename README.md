@@ -1,0 +1,1 @@
+ammo-debug is a versatile, highly customisable debugging console for use with [Ammo](https://github.com/BlackBulletIV/ammo) and [LÖVE](http://love2d.org). Check out the [wiki](https://github.com/BlackBulletIV/ammo-debug/wiki) for information and documentation (especially the [Introduction page](https://github.com/BlackBulletIV/ammo-debug/wiki/Introduction)).
