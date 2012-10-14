@@ -1,6 +1,6 @@
-local path = ({...})[1]:gsub("%.debug$", "")
-local debug = {}
-local Info = require(path .. ".Info")
+debug = {}
+debug.path = ({...})[1]:gsub("%.debug$", "")
+local Info = require(debug.path .. ".Info")
 
 -- PROPERTIES/SETTINGS --
 
@@ -47,8 +47,8 @@ debug.settings = {
   graphTextColor = { 255, 255, 255, 255 },
   
   -- text
-  font = love.graphics.newFont(path:gsub("%.", "/") .. "/inconsolata.otf", 18),
-  graphFont = love.graphics.newFont(path:gsub("%.", "/") .. "/inconsolata.otf", 14),
+  font = love.graphics.newFont(debug.path:gsub("%.", "/") .. "/inconsolata.otf", 18),
+  graphFont = love.graphics.newFont(debug.path:gsub("%.", "/") .. "/inconsolata.otf", 14),
   prompt = "> ",
   cursor = "|",
   infoSeparator = ": ",
@@ -103,7 +103,7 @@ end
 -- compile an argument as a string if possible
 local function compileArg(arg)
   if arg:sub(1, 1) == "$" then
-    arg = debug._runCommand(arg:match("^$(.+)$$"), true)
+    arg = debug.runCommand(arg:match("^$(.+)$$"), true)
   else  
     local func = loadstring("return " .. arg)
     
@@ -119,7 +119,7 @@ end
 
 -- run a batch file
 local function runBatch(file)
-  for line in love.filesystem.lines(file) do debug._runCommand(line) end
+  for line in love.filesystem.lines(file) do debug.runCommand(line) end
 end
 
 -- both these are used by the tween in moveConsole
@@ -155,7 +155,7 @@ end
 -- handles the execution of the current input line
 local function handleInput()
   addToBuffer(debug.settings.prompt .. debug.input)
-  debug._runCommand(debug.input)
+  debug.runCommand(debug.input)
   addTo(debug.history, debug.input, debug.settings.bufferLimit)
   debug.history.index = #debug.history + 1  
   debug.input = ""
@@ -184,8 +184,6 @@ local function reset()
   end
 end
 
--- PUBLIC HELPERS --
-
 -- joins a list of strings, separating them with spaces
 function debug._joinWithSpaces(...)
   local str = ""
@@ -204,8 +202,26 @@ function debug._joinWithSpaces(...)
   return str
 end
 
--- handles the execution of a command (argument splitting, compilation, calling command functions, etc.)
-function debug._runCommand(line, ret)
+-- FUNCTIONS --
+
+function debug.init()
+  debug.y = -debug.settings.height
+  reset()
+  if debug.live then debug.check() end
+  
+  -- default info graphs
+  debug.addGraph("FPS", love.timer.getFPS)
+  debug.addGraph("Memory", function() return ("%.2f MB"):format(collectgarbage("count") / 1024) end, function() return collectgarbage("count") / 1024 end)
+  debug.addGraph("Entities", function() return ammo.world and ammo.world.count or nil end)
+end
+
+function debug.log(...)
+  local msg = debug._joinWithSpaces(...)
+  addToBuffer(msg)
+  if debug.settings.printOutput then print(msg) end
+end
+
+function debug.runCommand(line, ret)
   local terms = {}
   local quotes = false
   
@@ -242,24 +258,6 @@ function debug._runCommand(line, ret)
       debug.log('No command named "' .. terms[1] .. '"')
     end
   end
-end
-
--- FUNCTIONS --
-
-function debug.init()
-  debug.y = -debug.settings.height
-  reset()
-  
-  -- default info graphs
-  debug.addGraph("FPS", love.timer.getFPS)
-  debug.addGraph("Memory", function() return ("%.2f MB"):format(collectgarbage("count") / 1024) end, function() return collectgarbage("count") / 1024 end)
-  debug.addGraph("Entities", function() return ammo.world and ammo.world.count or nil end)
-end
-
-function debug.log(...)
-  local msg = debug._joinWithSpaces(...)
-  addToBuffer(msg)
-  if debug.settings.printOutput then print(msg) end
 end
 
 function debug.addInfo(title, func)
@@ -448,7 +446,7 @@ end
 
 debug.commands["repeat"] = function(self, times, ...)
   local cmd = debug._joinWithSpaces(...)
-  for i = 1, tonumber(times) do self._runCommand(cmd) end
+  for i = 1, tonumber(times) do self.runCommand(cmd) end
 end
 
 function debug.commands:clear()
@@ -534,5 +532,3 @@ debug.help = {
     summary = "Lists all available commands or provides documentation for a specific command."
   }
 }
-
-return debug

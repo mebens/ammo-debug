@@ -10,11 +10,21 @@ function t:hide()
 end
 
 function t:step()
-  ammo.world:update(dt or love.timer.getDelta())
+  if ammo.world then ammo.world:update(dt or love.timer.getDelta()) end
 end
 
 function t:backstep()
-  ammo.world:update(-(dt or love.timer.getDelta()))
+  if ammo.world then ammo.world:update(-(dt or love.timer.getDelta())) end
+end
+
+function t:recreate()
+  if ammo.world then
+    local world = ammo.world.class:new()
+    world.active = ammo.world.active
+    world.visible = ammo.world.visible
+    ammo.world = world
+    log(ammo.world.active, ammo.world.visible)
+  end
 end
 
 return t
