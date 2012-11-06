@@ -176,7 +176,6 @@ end
 -- resets the console
 local function reset()
   debug.buffer = { index = 0 }
-  debug.log("==== ammo-debug 0.1 ====")
   
   -- initialisation file
   if love.filesystem.exists(debug.settings.initFile) then
