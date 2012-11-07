@@ -50,10 +50,9 @@ function Info:draw(x, y)
   local yOffset = s.font:getHeight() + self.padding
   
   -- info text
-  love.graphics.pushColor(s.color)
+  love.graphics.setColor(s.color)
   love.graphics.setFont(s.font)
   love.graphics.printf(self.title .. s.infoSeparator .. tostring(self.source()), x, y, width)
-  love.graphics.popColor()
   
   if self.dsettings.drawGraphs and self.graph then
     local x1, y1
@@ -61,7 +60,7 @@ function Info:draw(x, y)
     
     local lineStyle = love.graphics.getLineStyle()
     love.graphics.setLine(1, s.graphLineStyle)
-    love.graphics.pushColor(s.graphColor)
+    love.graphics.setColor(s.graphColor)
     
     -- graph lines
     for i = 1, #self.data do
@@ -75,13 +74,11 @@ function Info:draw(x, y)
     
     -- min/max text
     love.graphics.setFont(s.graphFont)
-    love.graphics.pushColor(s.graphTextColor)
+    love.graphics.setColor(s.graphTextColor)
     love.graphics.printf(formatNumber(self.data.max), x, y + yOffset, width, "right")
     love.graphics.printf(formatNumber(self.data.min), x, y + yOffset + self.height - s.graphFont:getHeight(), width, "right")
-    love.graphics.popColor()
     
     yOffset = yOffset + self.height
-    love.graphics.popColor()
     love.graphics.setLineStyle(lineStyle)
   end
   

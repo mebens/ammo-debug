@@ -348,17 +348,16 @@ end
 
 function debug.draw()
   local s = debug.settings
+  love.graphics.storeColor()
   
   if debug.visible then
     -- background
-    love.graphics.pushColor(s.bgColor)
+    love.graphics.setColor(s.bgColor)
     love.graphics.rectangle("fill", 0, debug.y, love.graphics.width, s.height)
-    love.graphics.popColor()
     
     -- border
-    love.graphics.pushColor(s.borderColor)
+    love.graphics.setColor(s.borderColor)
     love.graphics.rectangle("fill", 0, debug.y + s.height, love.graphics.width, s.borderSize)
-    love.graphics.popColor()
     
     -- text
     local str = ""
@@ -380,6 +379,8 @@ function debug.draw()
     local y = (s.alwaysShowInfo and 0 or debug.y) + s.padding
     for _, info in ipairs(debug.info) do y = y + info:draw(x, y) end
   end
+  
+  love.graphics.resetColor()
 end
 
 function debug.keypressed(key, code)
