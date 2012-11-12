@@ -314,6 +314,13 @@ end
 
 function debug.update(dt)
   if debug.active then
+    -- cursor blink
+    if timers.blink >= debug.settings.cursorBlinkTime then
+      timers.blink = -debug.settings.cursorBlinkTime
+    else
+      timers.blink = timers.blink + dt
+    end
+    
     -- erasing characters
     if love.keyboard.isDown(debug.controls.erase) and #debug.input > 0 then
       if timers.multiErase == 0 then
@@ -329,16 +336,10 @@ function debug.update(dt)
       end
       
       timers.multiErase = timers.multiErase + dt
+      timers.blink = 0 -- always show the cursor
     else
       timers.multiErase = 0
       timers.multiEraseChar = 0
-    end
-    
-    -- cursor blink
-    if timers.blink >= debug.settings.cursorBlinkTime then
-      timers.blink = -debug.settings.cursorBlinkTime
-    else
-      timers.blink = timers.blink + dt
     end
   end
   
@@ -369,8 +370,9 @@ function debug.draw()
     end
     
     str = str .. s.prompt .. debug.input
-    if timers.blink > 0 then str = str .. s.cursor end
+    if timers.blink >= 0 then str = str .. s.cursor end
     love.graphics.setFont(s.font)
+    love.graphics.setColor(s.color)
     love.graphics.printf(str, s.padding, debug.y + s.padding, love.graphics.width - s.infoWidth - s.padding * 2)
   end
   
@@ -414,6 +416,7 @@ function debug.keypressed(key, code)
     elseif code > 31 and code < 127 then
       -- ^ those are the printable characters
       debug.input = debug.input .. string.char(code)
+      timers.blink = 0 -- always show the cursor
     end
   end
 end
