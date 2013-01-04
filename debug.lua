@@ -295,6 +295,16 @@ function debug.include(t)
   end
 end
 
+function debug.exclude(t)
+  for k, v in pairs(t) do
+    if type(v) == "function" then
+      debug.commands[k] = nil
+    elseif k == "help" then
+      for cmd in pairs(v) do debug.help[cmd] = nil end
+    end
+  end
+end
+
 function debug.open(tween)
   debug.opened = true
   moveConsole(tween or debug.settings.tween)
