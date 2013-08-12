@@ -261,7 +261,6 @@ end
 
 function debug.addInfo(title, func)
   debug.info[#debug.info + 1] = Info:new(debug, title, func, false)
-  debug.info.keys[title] = #debug.info
 end
 
 function debug.addGraph(title, func, funcOrInterval, interval)
