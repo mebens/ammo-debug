@@ -372,7 +372,10 @@ function debug.draw()
     -- text
     local str = ""
     local rows = math.floor((s.height - s.padding * 2) / s.font:getHeight())
-    local begin = math.max(debug.buffer.index - rows + 2, 1) -- add 2: one for the input line, another for keeping it in bounds (not sure why its needed)
+    
+    -- add 3: one for the input line, another two for keeping it in bounds (not sure why its needed)
+    -- line wrapping also breaks this approach
+    local begin = math.max(debug.buffer.index - rows + 3, 1)
       
     for i = begin, debug.buffer.index do
       str = str .. debug.buffer[i] .. "\n"
@@ -394,7 +397,8 @@ function debug.draw()
   love.graphics.resetColor()
 end
 
-function debug.keypressed(key, code)
+
+function debug.keypressed(key)
   local c = debug.controls
   
   if key == c.open then
@@ -422,13 +426,28 @@ function debug.keypressed(key, code)
       debug.buffer.index = math.max(debug.buffer.index - 1, 0)
     elseif key == c.down then
       debug.buffer.index = math.min(debug.buffer.index + 1, #debug.buffer)
-    elseif code > 31 and code < 127 then
-      -- ^ those are the printable characters
-      debug.input = debug.input .. string.char(code)
-      timers.blink = 0 -- always show the cursor
     end
   end
 end
+
+function debug.textinput(text)
+  if not debug.active then return end
+  
+  for _, key in pairs(debug.controls) do
+    if text == key then return end
+  end
+  
+  local code = string.byte(text)
+  
+  if code > 31 and code < 127 then
+    -- ^ those are the printable characters
+    debug.input = debug.input .. text
+    timers.blink = 0 -- always show the cursor
+  end
+end
+
+if not love.textinput then love.textinput = debug.textinput end
+if not love.keypressed then love.keypressed = debug.keypressed end
 
 -- ESSENTIAL COMMANDS --
 

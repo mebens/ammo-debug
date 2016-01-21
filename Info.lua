@@ -59,7 +59,8 @@ function Info:draw(x, y)
     local x2, y2
     
     local lineStyle = love.graphics.getLineStyle()
-    love.graphics.setLine(1, s.graphLineStyle)
+    love.graphics.setLineStyle(s.graphLineStyle)
+    love.graphics.setLineWidth(1)
     love.graphics.setColor(s.graphColor)
     
     -- graph lines

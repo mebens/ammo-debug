@@ -40,7 +40,7 @@ function t:ls(arg1, arg2)
   local path = arg2
   if not arg2 and not option then path = arg1 end
   
-  local files = love.filesystem.enumerate(path or ".")
+  local files = love.filesystem.getDirectoryItems(path or ".")
   local all
   
   if option then
@@ -62,7 +62,7 @@ function t:psd()
 end
 
 function t:mkdir(path)
-  local status = love.filesystem.mkdir(path)
+  local status = love.filesystem.createDirectory(path)
   if not status then return "Directory wasn't created." end
 end
 
